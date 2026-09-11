@@ -1,0 +1,57 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Extract project
+        run: |
+          mkdir buildsrc
+          unzip -q medication-log.zip -d buildsrc
+
+      - name: Install dependencies
+        working-directory: buildsrc/medication-log
+        run: npm ci
+
+      - name: Sync Capacitor
+        working-directory: buildsrc/medication-log
+        run: npm run sync
+
+      - name: Build APK
+        working-directory: buildsrc/medication-log/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: medication-log-apk
+          path: buildsrc/medication-log/android/app/build/outputs/apk/debug/app-debug.apk
