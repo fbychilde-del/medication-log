@@ -1,0 +1,74 @@
+name: Build Yibu Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [yibu-android-mvp]
+    paths:
+      - 'yibu/**'
+      - 'yibu-source.zip'
+      - '.github/workflows/yibu-android.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yibu-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: yibu
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Extract Yibu project
+        working-directory: .
+        run: unzip -q yibu-source.zip
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: yibu/pnpm-lock.yaml
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test data and timer rules
+        run: pnpm test
+      - name: Build web app and prepare Android
+        run: pnpm android:prepare
+      - name: Build debug APK
+        working-directory: yibu/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+      - name: Name APK and record checksum
+        run: |
+          mkdir -p apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk apk/yibu-debug.apk
+          cd apk
+          sha256sum yibu-debug.apk > SHA256SUMS.txt
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: yibu-debug-apk
+          path: yibu/apk/
+          if-no-files-found: error
+          retention-days: 30
