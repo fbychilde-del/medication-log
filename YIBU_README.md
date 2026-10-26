@@ -2,6 +2,8 @@
 
 此分支在原有服药记录项目之外增加「一步」研究 App 的独立构建。
 
+2026-10-26 已成功构建 APK：[下载入口与构建记录](https://github.com/fbychilde-del/medication-log/actions/runs/40270756715)。产物名为 yibu-debug-apk；GitHub 在线产物保留至 2026-11-25，本地副本已保存。
+
 - 源码与 Android 工程：`yibu-source.zip`，解压后为 `yibu/`。
 - 打包流程：`.github/workflows/yibu-android.yml`，显示名 **Build Yibu Android APK**。
 - 推送本分支的新版本源码包会自动打包；原有服药记录文件与流程保留。
